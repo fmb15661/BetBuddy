@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Big Buford Bet Buddy</title>
+<style>
+body { font-family: Arial; background:#111; color:white; margin:0; padding:0; }
+h1 { text-align:center; margin:20px 0; font-size:32px; }
+.container { display:flex; flex-direction:row; height:100vh; }
+.left, .right { padding:20px; overflow:auto; }
+.left { flex:2; border-right:2px solid #222; }
+.right { flex:1; background:#000; }
+input { width:100%; font-size:20px; padding:6px; margin:6px 0; }
+.label { font-weight:bold; margin-top:10px; display:block; }
+.result { font-size:32px; margin-top:20px; text-align:center; }
+.smallres { font-size:18px; margin-top:10px; }
+</style>
+</head>
+<body>
+<h1>Big Buford Bet Buddy</h1>
+
+<div class="container">
+
+<div class="left">
+<div class="label">Bankroll:</div>
+<input id="bankroll">
+
+<div class="label">Kelly fraction (0-1):</div>
+<input id="kelly">
+
+<div class="label">Min EV%:</div>
+<input id="minev">
+
+<div class="label">Max % of bankroll cap:</div>
+<input id="maxcap">
+
+<hr style="margin:20px 0;">
+
+<div class="label">Fair Win % (manual):</div>
+<input id="fair">
+
+<div class="label">American Odds:</div>
+<input id="odds">
+
+<div class="label">Profit if Win:</div>
+<input id="pwin">
+
+<div class="label">Loss if Lose:</div>
+<input id="plose">
+
+<div class="result" id="stake"></div>
+</div>
+
+<div class="right">
+<h2>True Odds Calculator</h2>
+
+<div class="label">Pinn Price 1:</div>
+<input id="p1">
+
+<div class="label">Pinn Price 2:</div>
+<input id="p2">
+
+<div class="smallres" id="nv1"></div>
+<div class="smallres" id="nv2"></div>
+
+</div>
+
+</div>
+
+<script>
+function save(k,v){ localStorage.setItem(k,v); }
+function load(k,d){ return localStorage.getItem(k) ?? d; }
+function parseOdds(A){ if(!A) return null; A=parseFloat(A); return (A>=0)? A/100 : 100/Math.abs(A); }
+function amerFromProb(p){ let b=p/(1-p); return (b>=1)? "+"+(b*100).toFixed(0) : "-"+(100/b).toFixed(0); }
+
+let bankroll = document.getElementById("bankroll");
+let kelly = document.getElementById("kelly");
+let minev = document.getElementById("minev");
+let maxcap = document.getElementById("maxcap");
+let fair = document.getElementById("fair");
+let odds = document.getElementById("odds");
+let pwin = document.getElementById("pwin");
+let plose = document.getElementById("plose");
+let stake = document.getElementById("stake");
+
+bankroll.value=load("bk","1500");
+kelly.value=load("kl","0.3");
+minev.value=load("mv","1");
+maxcap.value=load("mc","0.10");
+
+function betcalc(){
+save("bk",bankroll.value);
+save("kl",kelly.value);
+save("mv",minev.value);
+save("mc",maxcap.value);
+let W=parseFloat(bankroll.value)||0;
+let k=parseFloat(kelly.value)||0;
+let minEV=parseFloat(minev.value)||0;
+let maxPct=parseFloat(maxcap.value)||0;
+let p=parseFloat(fair.value)||0; if(p>1) p=p/100;
+let A=parseFloat(odds.value)||0;
+let Pw=parseFloat(pwin.value)||0;
+let Pl=-Math.abs(parseFloat(plose.value)||0);
+let b=parseOdds(A)||0;
+let evpct=100*(p*b-(1-p));
+let x_raw=p*(W+Pl)-(1-p)*(W+Math.abs(Pw))/b;
+let x_k=k*x_raw;
+let x_cap=W*maxPct;
+let stk=(evpct<minEV)?0:Math.max(0,Math.min(x_k,x_cap));
+stake.innerHTML="Bet: $"+stk.toFixed(2);
+}
+
+function novig(){
+let a=parseFloat(p1.value)||null;
+let b=parseFloat(p2.value)||null;
+if(a==null||b==null){ nv1.innerHTML=""; nv2.innerHTML=""; return; }
+let fav=(a<b)?a:b;
+let dog=(a<b)?b:a;
+let pFav=( (fav>=0)?100/(fav+100):Math.abs(fav)/(Math.abs(fav)+100) );
+let pDog=( (dog>=0)?100/(dog+100):Math.abs(dog)/(Math.abs(dog)+100) );
+let sum=pFav+pDog;
+pFav/=sum; pDog/=sum;
+nv1.innerHTML="Side A No-Vig: "+amerFromProb(pFav)+" ("+(pFav*100).toFixed(2)+"%)";
+nv2.innerHTML="Side B No-Vig: "+amerFromProb(pDog)+" ("+(pDog*100).toFixed(2)+"%)";
+}
+
+function runAll(){ betcalc(); novig(); }
+
+let ids=["bankroll","kelly","minev","maxcap","fair","odds","pwin","plose","p1","p2"];
+ids.forEach(id=>{ document.getElementById(id).addEventListener("input",runAll); });
+runAll();
+</script>
+</body>
+</html>
+
